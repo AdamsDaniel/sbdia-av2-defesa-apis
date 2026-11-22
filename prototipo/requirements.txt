@@ -1,0 +1,7 @@
+numpy
+pandas
+scikit-learn
+matplotlib
+streamlit      # painel do SOC (dashboard.py)
+altair         # gráficos do painel (instalado junto com o streamlit)
+playwright     # opcional: capturar_dashboard.py, usa o Microsoft Edge instalado

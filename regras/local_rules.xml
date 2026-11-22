@@ -1,0 +1,164 @@
+<group name="corvina,api_gateway,waf,local">
+  <!--
+    Os campos correspondem ao decodificador JSON do access log da API Gateway.
+    Campos dinamicos usam <same_field>/<different_field>; nao use srcip.
+  -->
+
+  <rule id="100200" level="6">
+    <field name="httpMethod">POST</field>
+    <field name="resourcePath">/auth/login</field>
+    <field name="status">401</field>
+    <description>API Gateway: falha de autenticacao em /auth/login</description>
+    <group>authentication_failed,api_gateway,login_failed</group>
+  </rule>
+
+  <!--
+    AWS WAF: filtra somente BLOCK do grupo gerenciado real de SQLi/XSS.
+  -->
+  <rule id="100201" level="8">
+    <field name="action">BLOCK</field>
+    <field name="terminatingRuleId" type="pcre2">^AWS-AWSManagedRules(?:SQLi|KnownBadInputs|Common)RuleSet$</field>
+    <description>AWS WAF: SQLi ou XSS bloqueado por grupo gerenciado AWS</description>
+    <group>waf,blocked_request,web_attack</group>
+  </rule>
+
+  <!-- Nivel 3: registro, sem alerta. A correlacao abaixo gera o alerta. -->
+  <rule id="100202" level="3">
+    <field name="resourcePath">/auth/login</field>
+    <field name="status">200</field>
+    <time>7 pm - 7 am</time>
+    <description>Registro fora do horario: sucesso em /auth/login</description>
+    <group>api_gateway,off_hours,critical_endpoint</group>
+  </rule>
+
+  <rule id="100203" level="3">
+    <field name="resourcePath">/auth/token</field>
+    <field name="status">200</field>
+    <time>7 pm - 7 am</time>
+    <description>Registro fora do horario: sucesso em /auth/token</description>
+    <group>api_gateway,off_hours,critical_endpoint</group>
+  </rule>
+
+  <rule id="100204" level="3">
+    <field name="resourcePath">/pix/transferencias</field>
+    <field name="status">200</field>
+    <time>7 pm - 7 am</time>
+    <description>Registro fora do horario: PIX</description>
+    <group>api_gateway,off_hours,pix,critical_endpoint</group>
+  </rule>
+
+  <rule id="100205" level="3">
+    <field name="resourcePath" type="pcre2">^/contas/\{id\}/saldo$</field>
+    <field name="status">200</field>
+    <time>7 pm - 7 am</time>
+    <description>Registro fora do horario: consulta de saldo</description>
+    <group>api_gateway,off_hours,critical_endpoint</group>
+  </rule>
+
+  <rule id="100206" level="3">
+    <field name="resourcePath" type="pcre2">^/contas/\{id\}/extrato$</field>
+    <field name="status">200</field>
+    <time>7 pm - 7 am</time>
+    <description>Registro fora do horario: consulta de extrato</description>
+    <group>api_gateway,off_hours,critical_endpoint</group>
+  </rule>
+
+  <rule id="100207" level="3">
+    <field name="resourcePath" type="pcre2">^/cartoes/\{id\}$</field>
+    <field name="status">200</field>
+    <time>7 pm - 7 am</time>
+    <description>Registro fora do horario: consulta de cartao</description>
+    <group>api_gateway,off_hours,critical_endpoint</group>
+  </rule>
+
+  <rule id="100208" level="3">
+    <field name="resourcePath">/parceiros/v1/clientes</field>
+    <field name="status">200</field>
+    <time>7 pm - 7 am</time>
+    <description>Registro fora do horario: API de parceiro</description>
+    <group>api_gateway,off_hours,partner_api,critical_endpoint</group>
+  </rule>
+
+  <!-- Registros bem baixos para acessos bem-sucedidos em fins de semana. -->
+  <rule id="100209" level="3">
+    <field name="status">200</field>
+    <weekday>weekends</weekday>
+    <description>Registro fora do horario: acesso bem-sucedido no fim de semana</description>
+    <group>api_gateway,weekend,off_hours</group>
+  </rule>
+
+  <!-- Correlacoes -->
+  <rule id="100210" level="12" frequency="11" timeframe="120">
+    <if_matched_sid>100200</if_matched_sid>
+    <same_field>usuario</same_field>
+    <description>Forca bruta: mais de 10 falhas do mesmo usuario em 2 minutos</description>
+    <group>authentication_failed,brute_force,correlation</group>
+  </rule>
+
+  <rule id="100211" level="13" frequency="11" timeframe="300">
+    <if_matched_sid>100200</if_matched_sid>
+    <!-- A documentacao nao diz se different_field pode se repetir na mesma regra;
+         por seguranca correlacionamos so por usuario. A distribuicao por IPs
+         fica com o modelo de IA (visao por IP) e com a predicao de volume. -->
+    <different_field>usuario</different_field>
+    <description>Credential stuffing: falhas em muitos usuarios distintos em cinco minutos</description>
+    <group>authentication_failed,credential_stuffing,correlation</group>
+  </rule>
+
+  <rule id="100212" level="12" frequency="5" timeframe="300">
+    <if_matched_sid>100201</if_matched_sid>
+    <same_field>httpRequest.clientIp</same_field>
+    <description>SQLi ou XSS repetido do mesmo IP bloqueado pelo WAF</description>
+    <group>waf,sql_injection,xss,correlation</group>
+  </rule>
+
+  <!-- Padrao "falha seguida de sucesso" sem frequency (como a regra 40112 do Wazuh);
+       a documentacao nao traz exemplo desse uso: validar com wazuh-logtest. -->
+  <rule id="100213" level="12" timeframe="300">
+    <if_matched_sid>100200</if_matched_sid>
+    <same_field>usuario</same_field>
+    <field name="status">200</field>
+    <field name="resourcePath">/auth/login</field>
+    <description>Falha de login seguida de sucesso no mesmo usuario</description>
+    <group>authentication_failed,login_success_after_failure,correlation</group>
+  </rule>
+
+  <rule id="100214" level="7" frequency="11" timeframe="300">
+    <if_matched_group>off_hours</if_matched_group>
+    <same_field>usuario</same_field>
+    <description>Muitos acessos fora do horario da mesma entidade em cinco minutos</description>
+    <group>api_gateway,off_hours,correlation,volume_anormal</group>
+  </rule>
+
+  <rule id="100215" level="7" frequency="11" timeframe="300">
+    <if_matched_sid>100209</if_matched_sid>
+    <same_field>usuario</same_field>
+    <description>Muitos acessos bem-sucedidos da mesma entidade no fim de semana</description>
+    <group>api_gateway,weekend,correlation,volume_anormal</group>
+  </rule>
+
+  <!--
+    Ingestão dos alertas do serviço de IA (JSON Lines, contrato da seção 6).
+    O nível da regra acompanha a severidade calculada pelo modelo.
+  -->
+  <rule id="100220" level="6">
+    <field name="origem">^ia$</field>
+    <field name="severidade">^media$</field>
+    <description>IA: comportamento anômalo em API (severidade média)</description>
+    <group>ia,alerta_ia,severidade_media</group>
+  </rule>
+
+  <rule id="100221" level="10">
+    <field name="origem">^ia$</field>
+    <field name="severidade">^alta$</field>
+    <description>IA: comportamento anômalo em API (severidade alta)</description>
+    <group>ia,alerta_ia,severidade_alta</group>
+  </rule>
+
+  <rule id="100222" level="13">
+    <field name="origem">^ia$</field>
+    <field name="severidade">^critica$</field>
+    <description>IA: comportamento anômalo em API (severidade crítica)</description>
+    <group>ia,alerta_ia,severidade_critica</group>
+  </rule>
+</group>

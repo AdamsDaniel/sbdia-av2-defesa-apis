@@ -1,0 +1,39 @@
+nome: Exfiltracao de dados
+gatilho:
+  cenarios:
+    - exfiltracao_dados
+  severidades:
+    - critica
+passos:
+  - nome: Preservar contexto
+    acao: abrir_caso_e_registrar_top_features
+  - nome: Conter IP
+    acao: bloquear_ip_no_waf
+    ttl: 1 hora
+  - nome: Conter API
+    acao: aplicar_rate_limit_usage_plan
+    ttl: 1 hora
+  - nome: Aprovar bloqueio de alto impacto
+    acoes:
+      - suspender_api_key
+      - revogar_tokens
+    aprovacao_humana:
+      obrigatoria: true
+      timeout: 15 minutos
+      escalar_no_timeout: true
+      no_timeout_aplicar: bloqueio_temporario_pix
+      ttl_bloqueio_pix: 2 horas
+  - nome: Encerrar com conformidade
+    condicao: investigacao concluida
+    acoes:
+      - fechar_caso
+      - ajustar_regras
+      - avaliar_notificacao_anpd_bacen
+reversao:
+  ip_waf_ttl: 1 hora
+  rate_limit_ttl: 1 hora
+  api_key_suspensao_ttl: 1 hora
+  revogacao_ttl: 1 hora
+  pix_temporario_ttl: 2 horas
+notificacao:
+  destino: Plantao, ANPD e BACEN quando aplicavel

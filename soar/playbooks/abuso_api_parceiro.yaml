@@ -1,0 +1,31 @@
+nome: Abuso de API de parceiro
+gatilho:
+  cenarios:
+    - abuso_api_parceiro
+    - exfiltracao_dados
+  severidades:
+    - media
+    - alta
+    - critica
+passos:
+  - nome: Enriquecer api_key
+    acao: consultar_reputacao_ip_e_geoip
+  - nome: Abrir caso
+    destino: TheHive
+  - nome: Rate limit
+    condicao: severidade alta ou critica
+    acao: aplicar_rate_limit_usage_plan
+    ttl: 1 hora
+  - nome: Aprovar suspensao
+    condicao: exfiltracao ou severidade critica
+    acao: suspender_api_key_de_parceiro
+    aprovacao_humana:
+      obrigatoria: true
+      timeout: 15 minutos
+      escalar_no_timeout: true
+reversao:
+  rate_limit_ttl: 1 hora
+  api_key_suspensao_ttl: 1 hora
+  comandos: comandos da acao registram o comando de reversao
+notificacao:
+  destino: Slack ou Teams do plantao

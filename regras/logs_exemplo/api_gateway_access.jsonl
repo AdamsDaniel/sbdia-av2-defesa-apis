@@ -1,0 +1,3 @@
+{"requestId":"req-001","ip":"203.0.113.15","usuario":"u_ana","httpMethod":"POST","resourcePath":"/auth/login","path":"/auth/login","status":"401","responseLength":"84","requestTime":"22"}
+{"requestId":"req-002","ip":"198.51.100.22","usuario":"u_bruno","httpMethod":"GET","resourcePath":"/contas/{id}/saldo","path":"/contas/1042/saldo","status":"200","responseLength":"512","requestTime":"18"}
+{"requestId":"req-003","ip":"198.51.100.23","usuario":"api_parceiro_01","httpMethod":"GET","resourcePath":"/parceiros/v1/clientes","path":"/parceiros/v1/clientes","status":"200","responseLength":"1048576","requestTime":"31"}

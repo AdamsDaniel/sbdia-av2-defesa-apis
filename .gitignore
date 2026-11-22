@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+
+# Gerados pelo executar_tudo.py (dados, resultados, gráficos e casos do SOAR)
+prototipo/dados/
+prototipo/saida/
+soar/saida/

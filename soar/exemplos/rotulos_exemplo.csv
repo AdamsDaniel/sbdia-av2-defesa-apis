@@ -1,0 +1,4 @@
+alerta_id,rotulo_analista,comentario,minutos_resposta
+ia-20260925-000001,falso_positivo,Atividade do cliente confirmada como legitima,4
+ia-20260925-000007,falso_positivo,Lote legitimo conhecido do parceiro,6
+ia-20260925-000013,falso_positivo,Volume normal durante a hora comercial,3

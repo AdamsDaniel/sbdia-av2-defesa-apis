@@ -1,0 +1,36 @@
+nome: Conta comprometida
+gatilho:
+  cenarios:
+    - falha_seguida_sucesso
+    - token_roubado_pais_novo
+  severidades:
+    - alta
+    - critica
+passos:
+  - nome: Enriquecer entidade
+    acao: consultar_reputacao_ip_e_geoip
+  - nome: Agrupar alertas
+    janela: 15 minutos
+  - nome: Abrir caso
+    destino: TheHive
+  - nome: Contencao reversivel
+    condicao: severidade alta ou critica
+    acoes:
+      - bloquear_ip_no_waf
+      - exigir_step_up_mfa
+  - nome: Aprovar acao de alto impacto
+    condicao: severidade critica
+    acao: revogar_todos_os_tokens
+    aprovacao_humana:
+      obrigatoria: true
+      timeout: 15 minutos
+      escalar_no_timeout: true
+      no_timeout_aplicar: bloqueio_temporario_pix
+      ttl_bloqueio_pix: 2 horas
+reversao:
+  ip_waf_ttl: 1 hora
+  mfa_ttl: 1 hora
+  pix_temporario_ttl: 2 horas
+  comandos: comandos da acao registram o comando de reversao
+notificacao:
+  destino: Slack ou Teams do plantao
